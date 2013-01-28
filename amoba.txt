@@ -1,0 +1,111 @@
+Amoba by Slocum:
+
+A jol ismert jatek, nem lokaciohoz kotve. Van egy targy (/realms/slocum/amoba/items/amoba_cucc.c) amivel ki lehet hivni egy masik playert amobazni (aki meg nem amobazik). Kihivasnal a kihivotthoz tesz egy seged cuccot (/realms/slocum/amoba/items/amoba_mano.c) aminel el tudja fogadni, illetve elutasitani a  kihivast (30 mp all rendelkezesere). Elfogadas utan random dont, hogy melyik jatekos melyik jelet kapja (piros X es zold O), valamint a kezdesrol is random dont. Mind a ket jatekos kap 1-1 seged cuccot, amivel a parancsok mukodnek (/realms/slocum/amoba/items/amoba_o.c és /realms/slocum/amoba/amoba_x.c). Ekkor a seged cucc eltunik, mar nincs ra szukseg, tortenetileg ugyanakkor tovabbra is szerepet jatszik. Maga a kod az alap targyban van, mind a ket seged cucc erre hivatkozik. Az osszes cucc (kiveve az amoba_cucc.c -t) extra_item kent viselkedik, szoval nem kellene hogy zavarja az 500as item limitet, ezt nem kezeltem le. Toplista es pontok az AMOBASTAT file ban tarolodnak, megpedig a kovetkezo formaban: nyert/dontetlen/vesztett/feladott jatekok szama. toplista a nyertes jatekok alapjan sorolodik.
+
+Bekotesi javaslat: mano falvan egyedi cucc, vagy kuldiert kapni.
+Bekotes elott: teszt miatt amoba_mano.c amoba_o.c es amoba_x.c init() ben vizsgalja hogy usernel van-e a cucc (nem foldon), csicskat be kellett raknom hogy tudjak egyedul is tesztelni, bekotes elott ezt a kivetelt ki kell venni!
+
+Parancsok:
+amoba_cucc.c
+-kihiv <player> : ha adott player be van lepve, nincs meg kihivva, nem amobazik, akkor kuldd neki egy kihivast, ami 30mp ig ervenyes
+-szabalyok : szabalyok/parancsok kiirasa
+-pontok : statok lekerdezese, 10es toplista, de lehet playerenkent is keresni
+
+amoba_mano.c
+-elfogad : kihivas elfogadasa
+-elutasit : kihivas elutasitasa
+
+amoba_x.c
+-rak <oszlop> <sor> : jel rakasa adott mezore
+-felad : jatek feladasa
+
+amoba_o.c
+-rak <oszlop> <sor> : jel rakasa adott mezore
+-felad : jatek feladasa
+
+Fileok amik kellenek a mukodeshez:
+
+/realms/slocum/amoba/amoba.h
+/realms/slocum/amoba/items/amoba_cucc.c
+/realms/slocum/amoba/items/amoba_mano.c
+/realms/slocum/amoba/items/amoba_o.c
+/realms/slocum/amoba/items/amoba_x.c
+
+Lekezelt bugok:
+seged cuccokat nem lehet: atadni, aldozni, elegetni, eldobni, eladni
+kilepesnel, afknal auto vesztes
+egyszerre egy playernel csak egy jatek futhat
+
+Fontosabb tudnivalok:
+getenv("AMOBAZIK") ban tarolja, hogy valaki amobazik-e avagy sem: 1 ha igen, 0 ha nem
+define-k amoba_cucc.c elejen:
+-MODSZER : 1/0 racsok szelessege, 1 nel dupla karakter, 0 nal egy karakter szeles
+-J_MESTER: 1/0 jatek mester kozli jatek csatira a nyertest/vesztest/dontetlent/feladast 1 be, 0 ki
+-OSZLOPOK, SOROK : egyertelmu, DE: oszlopokbol max 26 legyen, leven nincs tobb karakter, sorok lehet vegtelen, de azert ne (tul nagy tablanal szetcsuszik a string) :)
+-COLOR: a racs szine, alapbol szurke
+-KEZDO_ERTEK, KEZDO_ERTEK2 : ezeket ne ird at, kulonben jatek elejen szetcsuszik a tabla
+
+--
+AMOBA_CUCC.C
+--
+int szabalyok() : parancs, szabalyok es parancsok kiirasa
+int kihiv(string str) : parancs, kihivas megkuldese kerdezo_mano object kuldese (amoba_mano.c), beallitja a SETENV("AMOBAZIK",1) et
+
+int elfogad() : remote parancs, kihivas elfogadasa, egyben ez is inditja a jatekot, kiveszi az amoba_mano.c -t (hogy kesobbiekben ne lehessen elfogad/elutasittal bugolni, de tortenetileg megmarad a mano). Eldonti, hogy ki melyik jellel legyen (player1/player2 sorolas), valamint hogy ki kezdjen, kiadja a seged cuccokat a ket jatekosnak (mano1 es mano2 objectek)
+
+int elutasit() : remote parancs, kihivas elutasitasa, kerdezo_mano eltuntetese, kezdoertekek visszaallitasa amoba_over()-el
+
+void look_at_paper() : remote parancs, papirra ranezes, ha kicsuszott volna kepernyobol
+
+int felad() : remote parancs, jatek feladasa, kezdoertekek visszallitasa
+
+int rak(string str): remote parancs, ezzel rak a jatekos adott mezore, megvizsgalja, hogy az adott mezo letezik-e, szabad-e, valamint, hogy a rakassal letrejott-e az 5 jel egy sorban (amoba(object ob,int x,int y) fuggvennyel), megnezi, hogy azzal, amit rakott a jatekos, betelt-e a papir, elinditja a call_outot afk kezelesre
+
+int kilep_a() : remote parancs, kilepes kezelesre kezdo ertekek visszaallitasa
+
+int pontok() : statok lekerdezese generalban, vagy playerre vetitve
+
+--
+seged fgk
+--
+int player1timeout() : egyes jatekos timeoutjat hajtja vegre
+
+int player2timeout() : kettes jatekos timeoutjat hajtja vegre
+
+void kihivas_timeout() : kihivasnal a 30 mps timeoutot hajtja vegre
+
+void allocater(int i) : a ketdimenzios tomb felepitesenel segedkezik
+
+void initm() : elejen feltolti kezdo ertekkel a tablat, hogy ne legyen szetcsuszva
+
+void setpapir() : papir string felirasa
+
+int cba(string s) : rakasnal segedkezik
+
+string abc(int i) : papir felirasnal segedkezik
+
+int qid(object ob) : object idjet adja visszatereskent, kell hogy tudja a program ki kovetkezik
+
+void amoba_over() : kezdo ertekek visszaallitasa, bent levo call_outok kiszedese, setenv visszaalitasa
+
+int qturn(object ob) : ob van-e soron
+
+void rakott(object ob,int x,int y) : ob rakott az x y mezore, seged fg rakasnal
+
+int cc(int i) : atellenes iranyt adja vissza, amoba vizsgalatnal van ra szukseg
+
+int papiron(int x,int y) : x y mezo papiron van-e
+
+void getter(int x,int y,int irany) : seged fg amoba vizsgalatnal, xs, ys seged valtozokra allit be irany - beli szomszedot
+
+void make_it_flash()  : amoba fg hez seged, ha amoba letrejott, ez villogtatja meg az amobaban szereplo mezoket
+
+int amoba(object ob,int x,int y) : maga az amboba vizsgalat, ob rakott x y mezore, letrejott-e vele amoba, ennel elegansabban nem tudtam megoldani. 8 iranyba lehetseges elindulni, vegignezi az osszes lehetoseget 1 iranyba, es ezt megismetli a masik  7 iranyban is (for ciklus)
+
+int nincs_szabad() : seged fg rakasnal, megnezi hogy van-e szabad mezo a papiron
+
+void kov(object ob) : ob rakott, kovetkezo jatekos johet
+
+object get_kihivo() : remote seged fg, hogy cucc csak annal lehessen akinel lehet
+
+object get_kihivott() : remote seged fg, hogy cucc csak annal lehessen akinel lehet
